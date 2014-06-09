@@ -36,10 +36,16 @@ public class MainActivity extends Activity {
 	Thread thread;
 	String TAG="Error run";
 	List<ScanResult> results;
+	String scanResults;
 
+	String database="uni";
 	static Connection conexionMySQL;
 	static String SQLEjecutar;
 	String resultadoSQL;
+	//String[][][] sourceElements=new String[3][3][3];
+	boolean activityStopped = false;
+	int numFilas;
+	int numColumnas;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -54,8 +60,9 @@ public class MainActivity extends Activity {
 			  public void run() {
 			    try {
 			    	Looper.prepare();
-			      while (!isInterrupted()) {
-			    	  
+			    	Log.d("activityStopped ",String.valueOf(activityStopped));
+			      while (!activityStopped) {
+			    //while (!isInterrupted()) {  
 			        Thread.sleep(10000);
 			        try
 			    	  {    		
@@ -74,21 +81,47 @@ public class MainActivity extends Activity {
 			    		}
 		        	  try
 					  {
-		        		 
+		        		  	int i=0;
+		        		  	SQLEjecutar="";
 			        		for (ScanResult result : results)
 			        		{
 			        				
-			        					
-			        					SQLEjecutar = "select Location from A"+result.BSSID.replace(":", "")+" where Power>"+(result.level-5)+" AND POWER<"+(result.level+5);
+			        					//Log.d("consulta", "size: "+results.size()+" i:"+i);
+			        			if(result.level>5)
+			        			{
+		        					SQLEjecutar = SQLEjecutar+"select '"+result.BSSID.replace(":", "")+"' as tableName, Location, Floor from A"+result.BSSID.replace(":", "")+" where Power>"+(result.level-5)+" AND POWER<"+(result.level+5);
+
+			        			}
+			        			else
+			        			{
+		        					SQLEjecutar = SQLEjecutar+"select '"+result.BSSID.replace(":", "")+"' as tableName, Location, Floor from A"+result.BSSID.replace(":", "")+" where Power>"+(result.level-5)+" AND POWER<"+(result.level+5);
+			        			}
 			        					//SQLEjecutar ="select Power,Location from A"+result.BSSID.replace(":", "");
-			        					conectarBDMySQL(usuarioMySQL, contrasenaMySQL, ipServidorMySQL, puertoMySQL, "prova");
+			        					//conectarBDMySQL(usuarioMySQL, contrasenaMySQL, ipServidorMySQL, puertoMySQL, "prova");
 			        					//Log.d("CONECTADO", "BONA CONEXIO");
 			        					//conectarBDMySQL(usuarioMySQL, contrasenaMySQL, ipServidorMySQL, puertoMySQL, "");
-			        					resultadoSQL="";
-			        					resultadoSQL = ejecutarConsultaSQL(false, getApplication());
+			        					//resultadoSQL="";
+			        					//resultadoSQL = ejecutarConsultaSQL(false, getApplication());
 			        					//Log.d("consulta", "BONA Consulta");
-						              	scanResults = scanResults+"SSID: "+result.SSID+" "+result.level+"\n"+resultadoSQL+"\n";
+						              	//scanResults = scanResults+"SSID: "+result.SSID+" "+result.level+"\n"+resultadoSQL+"\n";
+			        					if( i != results.size()-1)
+			        					{
+			        						SQLEjecutar=SQLEjecutar+" UNION ";
+			        					}
+			        					++i;
 			        		}  
+			        		
+			        		conectarBDMySQL(usuarioMySQL, contrasenaMySQL, ipServidorMySQL, puertoMySQL, database);
+        					//Log.d("CONECTADO", "BONA CONEXIO");
+        					//conectarBDMySQL(usuarioMySQL, contrasenaMySQL, ipServidorMySQL, puertoMySQL, "");
+        					//resultadoSQL="";
+			        		//resultadoSQL = ejecutarConsultaSQL(false, getApplication());
+        					String [][] array =consultaSQLArray(false, getApplicationContext());
+        					
+        					scanResults =getLocation(array);
+        					//Log.d("RESULT", String.valueOf(array));
+			        		//Log.d("consulta", SQLEjecutar);
+			              	//scanResults = resultadoSQL+"\n";
 					  }
 		    			catch (Exception e) 
 		              {  
@@ -105,103 +138,29 @@ public class MainActivity extends Activity {
 			        
 			      }
 			    } catch (InterruptedException e) {
-			    	//Looper.loop();
+			    	Looper.loop();
 			    }
 			  }
 			};
 
 			t.start();
-			/*
-			Button start = (Button)findViewById(R.id.start_scan);
-			start.setOnClickListener(new View.OnClickListener() 
-	        {
-		          public void onClick(View v) 
-		          {
-		        	  //Conectamos con el servidor de MySQL directamente
-		              try
-					  {
-		            	  
-		            	  String conexionMySQLURL = "jdbc:mysql://" + 
-		            	  		ipServidorMySQL + ":" + puertoMySQL;
-		            	  String usuario = "rroot";
-		            	  String contrasena = "P@@ssw0rd";
-		            	  
-		            	  Toast.makeText(getApplicationContext(),
-				                    "Conectando a servidor MySQL", 
-				                    Toast.LENGTH_SHORT).show();
-		            	  	
-		            	  Class.forName("com.mysql.jdbc.Driver").newInstance();  
-		            	  Connection con = DriverManager.getConnection(conexionMySQLURL, 
-		            			  usuario, contrasena);
-		            	  
-		            	  Toast.makeText(getApplicationContext(),
-				                    "Conectado Servidor MySQL", 
-				                    Toast.LENGTH_LONG).show();
-		            	  con.close();            	  
-					  }
-		              catch (ClassNotFoundException e) 
-		              {
-				      	  Toast.makeText(getApplicationContext(),
-				                    "Error: " + e.getMessage(),
-				                    Toast.LENGTH_SHORT).show();
-		              } 
-		              catch (SQLException e) 
-		              {
-				      	  Toast.makeText(getApplicationContext(),
-				                    "Error: " + e.getMessage(),
-				                    Toast.LENGTH_SHORT).show();
-		              }
-		              catch (Exception e) 
-		              {  
-		            	  Toast.makeText(getApplicationContext(),
-				                    "Error: " + e.getMessage(),
-				                    Toast.LENGTH_LONG).show();
-		              }
-		          }
-		        });
-		*/
-		/*
-		Thread t = new Thread() {
 
-			  @Override
-			  public void run() {
-        Log.d("Trying to instantiate driver", "try");
-        try {
-                        Class.forName("com.mysql.jdbc.Driver").newInstance();
-
-                        try {
-							conexionMySQL =	DriverManager.getConnection("jdbc:mysql://"+ip+":"+port,usuario,contrasena);
-							Log.d("CONNECTION", "connected");
-						} catch (SQLException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-							Log.d("CONNECTION", "not connected: "+e.getMessage());
-						}
-                        
-    	    			
-                } catch (ClassNotFoundException e) {
-                        // TODO Auto-generated catch block
-                	Log.d("com.mysql.jdbc.Driver", "NOT found");
-                        e.printStackTrace();
-                } catch (IllegalAccessException e) {
-                	Log.d("com.mysql.jdbc.Driver", "ilegal access");
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                } catch (InstantiationException e) {
-                	Log.d("com.mysql.jdbc.Driver", "Instantiation exception");
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                }
-			  }
-		};
-		t.start();
-		*/
 		
 	}
 	
 	protected void onResume()
 	{
 		super.onResume();
+		activityStopped = false;
+		
+	    
+	}
+	
+	protected void onPause()
+	{
+		super.onPause();
+		activityStopped = true;
+		
 		
 	    
 	}
@@ -268,7 +227,7 @@ public class MainActivity extends Activity {
 				  
           	  //número de columnas (campos) de la consula SQL            	  
           	  numColumnas = rs.getMetaData().getColumnCount();          	  
-
+          	Log.d("culumnas", numColumnas.toString());
       		  //obtenemos el título de las columnas
       		  for (int i = 1; i <= numColumnas; i++)
       		  {
@@ -296,7 +255,7 @@ public class MainActivity extends Activity {
           		  
           		  //obtenemos los datos de cada columna
           		  for (int i = 1; i <= numColumnas; i++)
-                  {                          
+                  {
                         if (rs.getObject(i) != null)
                         {
                       	  if (resultadoSQL != "")
@@ -346,6 +305,145 @@ public class MainActivity extends Activity {
       	Log.d("EjecutarBDMySQL", e.getMessage());
       	  return "";
         }
+    }
+    
+    public String[][] consultaSQLArray(Boolean SQLModificacion, Context context)
+    {
+    	String[][] sourceElements=new String [0][0];
+        try
+		{
+          String resultadoSQL = "";
+          //ejecutamos consulta SQL de selección (devuelve datos)
+      	  if (!SQLModificacion)
+      	  {	            	    
+      		  
+      		  Statement st = conexionMySQL.createStatement();
+      		  ResultSet rs = st.executeQuery(SQLEjecutar); 
+      		  //Log.d("SQL query", SQLEjecutar);
+
+			  numColumnas = 0;
+			  numFilas = 0;
+          	  //número de columnas (campos) de la consula SQL            	  
+          	  numColumnas = rs.getMetaData().getColumnCount();          	  
+          	  rs.last();
+          	  numFilas=rs.getRow();
+          	  rs.first();
+          	  sourceElements=new String[numFilas-1][numColumnas];
+          	  Log.d("ENTRA", "columnas: "+numColumnas+" object:"+numFilas);
+
+          	  //mostramos el resultado de la consulta SQL
+          	  
+          	  while (rs.next()) 
+          	  {  
+          		  resultadoSQL = resultadoSQL + "\n";
+          		  
+          		  //obtenemos los datos de cada columna
+          		  for (int i = 1; i <= numColumnas; i++)
+                  {       
+          			sourceElements[rs.getRow()-2][i-1]=rs.getObject(i).toString();
+              		//Log.d("ELEMENT", " ["+(rs.getRow()-2)+"]["+(i-1)+"]: "+sourceElements[rs.getRow()-2][i-1]);
+          			  /*
+                        if (rs.getObject(i) != null)
+                        {
+
+                      		sourceElements[rs.getRow()-2][i-1]=rs.getObject(i).toString();
+                      		Log.d("ELEMENT", " ["+(rs.getRow()-2)+"]["+(i-1)+"]: "+sourceElements[rs.getRow()-1][i-1]);
+
+                        }
+                        else
+                        {
+                      		sourceElements[rs.getRow()-2][i-1]="null;";
+                      		Log.d("ELEMENT", " ["+(rs.getRow()-2)+"]["+(i-1)+"]: "+sourceElements[rs.getRow()-1][i-1]);
+                        }  
+                        */                         
+                    }
+          	  }
+      		  st.close();
+      		  rs.close();        		  
+		  }
+      	  // consulta SQL de modificación de 
+      	  // datos (CREATE, DROP, INSERT, UPDATE)
+      	  else 
+      	  {
+      		  int numAfectados = 0; 
+      		  Statement st = conexionMySQL.createStatement();
+      		  numAfectados = st.executeUpdate(SQLEjecutar);
+      		  resultadoSQL = "Registros afectados: " + String.valueOf(numAfectados);
+      		  st.close();
+      	  }
+      	  return sourceElements;
+		}
+        /*
+        catch(SQLException e)
+        {
+        	Log.d("EjecutarBDMySQL", e.getMessage());
+        	return sourceElements;
+        	 
+        }
+        */
+        catch (Exception e) 
+        {  
+        	Log.d("EjecutarBDMySQL", e.getMessage());
+        	return sourceElements;
+        }
+    }
+    
+    public String getLocation( String[][] array)
+    {
+    	String Location="";
+    	String[][] locationArray = new String [array.length][array.length];
+    	int k = 0;
+    	Log.d("longitud array", String.valueOf(array.length));
+    	for(int i=0; i<array.length; i++)
+    	{
+    		Boolean equal=false;
+    		
+    		/*
+    		for (int j=0; j<array[i].length; j++)
+    		{
+    			Log.d("columnes", String.valueOf(array[i].length));
+    			Log.d("POSICION", array[i][j]);
+    		}
+    		*/
+    		for(int j=0; j<locationArray.length; j++)
+    		{
+    			if(array[i][1].equals(locationArray[j][0]))
+    			{
+    				equal=true;
+    	    		if(!array[i][0].equals(locationArray[j][1]))
+    	    		{
+    	    			Log.d("igual?", array[i][0]+" no es igual a "+locationArray[j][1]+" per "+locationArray[j][0]);
+    	    			locationArray[j][1]=array[i][0];
+    	    			locationArray[j][2]=String.valueOf(Integer.valueOf(locationArray[j][2])+1);
+    	    		}
+    			}
+    		}
+    		if(equal==false)
+    		{
+    			
+    			locationArray[k][0]=array[i][1];
+    			locationArray[k][1]=array[i][0];
+    			locationArray[k][2]="1";
+    			locationArray[k][3]=array[i][2];
+    			k++;
+    		}
+    		Log.d("WIFI", array[i][0]);
+
+    	}
+    	int masApariciones=0;
+		for (int j=0; j<=k-1; j++)
+		{
+			Log.d("Location: ", locationArray[j][0]);
+			Log.d("ultim wifi", locationArray[j][1]);
+			Log.d("repeticions:", locationArray[j][2]);
+			if(Integer.valueOf(locationArray[j][2])>masApariciones)
+			{
+				masApariciones=Integer.valueOf(locationArray[j][2]);
+				Location=" Estas a la planta "+locationArray[j][3]+" al lloc "+locationArray[j][0];
+			}
+			
+		}
+		return Location;
     }
     
     @Override
