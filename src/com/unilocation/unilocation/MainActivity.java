@@ -38,7 +38,7 @@ public class MainActivity extends Activity {
 	List<ScanResult> results;
 	String scanResults;
 
-	String database="uni";
+	String database="prova";
 	static Connection conexionMySQL;
 	static String SQLEjecutar;
 	String resultadoSQL;
@@ -46,14 +46,20 @@ public class MainActivity extends Activity {
 	boolean activityStopped = false;
 	int numFilas;
 	int numColumnas;
+	int numScans=0;
+	String SQLTablas;
 	
+	/**
+	 * El método onCreate se ejecuta al crear la aplicación
+	 * @param Bundle savedInstance Usado para pasar datos a través de diferentes Activities
+	 */
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		textView = (TextView) findViewById(R.id.hello_world);
-		textView.setText("hello World");
-	
+		textView.setText("Redes No escaneadas");
+		//este thread hará el escaneo de las redes y las queries a la base de datos.
 		Thread t = new Thread() {
 
 			  @Override
@@ -61,9 +67,10 @@ public class MainActivity extends Activity {
 			    try {
 			    	Looper.prepare();
 			    	Log.d("activityStopped ",String.valueOf(activityStopped));
+			    
 			      while (!activityStopped) {
 			    //while (!isInterrupted()) {  
-			        Thread.sleep(10000);
+			        
 			        try
 			    	  {    		
 			        		String connectivity_context = Context.WIFI_SERVICE;
@@ -83,19 +90,33 @@ public class MainActivity extends Activity {
 					  {
 		        		  	int i=0;
 		        		  	SQLEjecutar="";
+		        		  	SQLTablas="";
 			        		for (ScanResult result : results)
 			        		{
 			        				
 			        					//Log.d("consulta", "size: "+results.size()+" i:"+i);
-			        			if(result.level>5)
+			        			//if(result.level>-60)
+			        			//{
+			        				//SQLTablas = SQLTablas+"CREATE TABLE IF NOT EXISTS A"+result.BSSID.replace(":", "")+" LIKE A62233d6ee648";
+		        					//SQLEjecutar = SQLEjecutar+"SELECT '"+result.BSSID.replace(":", "")+"' as tableName, Location, Floor from A"+result.BSSID.replace(":", "")+" where Power>"+(result.level-5)+" AND POWER<"+(result.level+5);
+		        					//SQLEjecutar = SQLEjecutar+" IF (SELECT A"+result.BSSID.replace(":", "")+" FROM information_schema.tables WHERE table_schema='"+database+"' AND table_name='A"+result.BSSID.replace(":", "")+") THEN select 'A"+result.BSSID.replace(":", "")+"' as tableName, Location, Floor from A"+result.BSSID.replace(":", "")+" where Power>"+(result.level-5)+" AND POWER<"+(result.level+5)+" END IF";
+			        			if(result.level>-60)
+			        			{	
+			        				SQLEjecutar=SQLEjecutar+"select '"+result.BSSID.replace(":", "")+"' as tableName, Location, Floor from A"+result.BSSID.replace(":", "")+" where Power>"+(result.level-8)+" AND POWER<"+(result.level+8);
+			        			}
+			        			else
 			        			{
-		        					SQLEjecutar = SQLEjecutar+"select '"+result.BSSID.replace(":", "")+"' as tableName, Location, Floor from A"+result.BSSID.replace(":", "")+" where Power>"+(result.level-5)+" AND POWER<"+(result.level+5);
+			        				SQLEjecutar=SQLEjecutar+"select '"+result.BSSID.replace(":", "")+"' as tableName, Location, Floor from A"+result.BSSID.replace(":", "")+" where Power>"+(result.level-5)+" AND POWER<"+(result.level+5);
 
 			        			}
+			        			
+			        			//}
+			        			/*
 			        			else
 			        			{
 		        					SQLEjecutar = SQLEjecutar+"select '"+result.BSSID.replace(":", "")+"' as tableName, Location, Floor from A"+result.BSSID.replace(":", "")+" where Power>"+(result.level-5)+" AND POWER<"+(result.level+5);
 			        			}
+			        			*/
 			        					//SQLEjecutar ="select Power,Location from A"+result.BSSID.replace(":", "");
 			        					//conectarBDMySQL(usuarioMySQL, contrasenaMySQL, ipServidorMySQL, puertoMySQL, "prova");
 			        					//Log.d("CONECTADO", "BONA CONEXIO");
@@ -107,6 +128,7 @@ public class MainActivity extends Activity {
 			        					if( i != results.size()-1)
 			        					{
 			        						SQLEjecutar=SQLEjecutar+" UNION ";
+			        						//SQLTablas=SQLTablas+" UNION ";
 			        					}
 			        					++i;
 			        		}  
@@ -116,9 +138,10 @@ public class MainActivity extends Activity {
         					//conectarBDMySQL(usuarioMySQL, contrasenaMySQL, ipServidorMySQL, puertoMySQL, "");
         					//resultadoSQL="";
 			        		//resultadoSQL = ejecutarConsultaSQL(false, getApplication());
+			        		//ejecutarConsultaCambios(null, getApplicationContext());
         					String [][] array =consultaSQLArray(false, getApplicationContext());
         					
-        					scanResults =getLocation(array);
+        					scanResults =numScans+"- "+getLocation(array);
         					//Log.d("RESULT", String.valueOf(array));
 			        		//Log.d("consulta", SQLEjecutar);
 			              	//scanResults = resultadoSQL+"\n";
@@ -135,7 +158,8 @@ public class MainActivity extends Activity {
 			        	  textView.setText(scanResults);
 			          }
 			        });
-			        
+			        Thread.sleep(10000);
+			        numScans=numScans+1;
 			      }
 			    } catch (InterruptedException e) {
 			    	Looper.loop();
@@ -307,6 +331,29 @@ public class MainActivity extends Activity {
         }
     }
     
+    public void ejecutarConsultaCambios(Boolean SQLModificacion, Context context)
+    {
+    	
+        try
+		{
+
+          //ejecutamos consulta SQL de selecciÃ³n (devuelve datos)
+    
+
+      		  Statement st = conexionMySQL.createStatement();
+      		  st.executeUpdate(SQLTablas);
+      		  st.close();
+		}
+        
+        catch (Exception e) 
+        {  
+      	  Toast.makeText(context,
+                    "Error: " + e.getMessage(),
+                    Toast.LENGTH_SHORT).show();
+      	Log.d("EjecutarBDMySQL", e.getMessage());
+        }
+    }
+    
     public String[][] consultaSQLArray(Boolean SQLModificacion, Context context)
     {
     	String[][] sourceElements=new String [0][0];
@@ -388,63 +435,65 @@ public class MainActivity extends Activity {
         }
     }
     
-    public String getLocation( String[][] array)
-    {
-    	String Location="";
-    	String[][] locationArray = new String [array.length][array.length];
-    	int k = 0;
-    	Log.d("longitud array", String.valueOf(array.length));
-    	for(int i=0; i<array.length; i++)
-    	{
-    		Boolean equal=false;
-    		
-    		/*
-    		for (int j=0; j<array[i].length; j++)
-    		{
-    			Log.d("columnes", String.valueOf(array[i].length));
-    			Log.d("POSICION", array[i][j]);
-    		}
-    		*/
-    		for(int j=0; j<locationArray.length; j++)
-    		{
-    			if(array[i][1].equals(locationArray[j][0]))
-    			{
-    				equal=true;
-    	    		if(!array[i][0].equals(locationArray[j][1]))
-    	    		{
-    	    			Log.d("igual?", array[i][0]+" no es igual a "+locationArray[j][1]+" per "+locationArray[j][0]);
-    	    			locationArray[j][1]=array[i][0];
-    	    			locationArray[j][2]=String.valueOf(Integer.valueOf(locationArray[j][2])+1);
-    	    		}
-    			}
-    		}
-    		if(equal==false)
-    		{
-    			
-    			locationArray[k][0]=array[i][1];
-    			locationArray[k][1]=array[i][0];
-    			locationArray[k][2]="1";
-    			locationArray[k][3]=array[i][2];
-    			k++;
-    		}
-    		Log.d("WIFI", array[i][0]);
-
-    	}
-    	int masApariciones=0;
+	/**
+	 * Esta función contiene el algoritmo usado para decidir la localización.
+	 * @param String[][] array. Este array contiene la query a la base de datos. LA primera dimensión son 
+	 * las filas de la query, la columna [i][0], es el nombre del access point, la columna [i][1] es la
+	 * localización y la columna [i][2] es la planta en que se encuentra.
+	 * @return String Location. La localización deducida
+	 */
+	public String getLocation( String[][] array)
+	{
+		String Location="";
+		String[][] locationArray = new String [array.length][array.length];
+		int k = 0;
+		Log.d("longitud array", String.valueOf(array.length));
+		for(int i=0; i<array.length; i++)
+		{
+			Boolean equal=false;
+			for(int j=0; j<locationArray.length; j++)
+			{
+				if(array[i][1].equals(locationArray[j][0]) && array[i][2].equals(locationArray[j][3]))
+				{
+					equal=true;
+		    		if(!array[i][0].equals(locationArray[j][1]))
+		    		{
+		    			Log.d("igual?", array[i][0]+" no es igual a "+locationArray[j][1]+" para el wifi "+locationArray[j][0]);
+		    			locationArray[j][1]=array[i][0];
+		    			locationArray[j][2]=String.valueOf(Integer.valueOf(locationArray[j][2])+1);
+		    		}
+				}
+			}
+			if(equal==false)
+			{
+				locationArray[k][0]=array[i][1];
+				//almaceno el último wifi de la localización y en caso que sea distinto, se suman las repeticiones
+				locationArray[k][1]=array[i][0];
+				locationArray[k][2]="1";
+				locationArray[k][3]=array[i][2];
+				k++;
+			}
+		}
+		int masApariciones=0;
 		for (int j=0; j<=k-1; j++)
 		{
 			Log.d("Location: ", locationArray[j][0]);
-			Log.d("ultim wifi", locationArray[j][1]);
-			Log.d("repeticions:", locationArray[j][2]);
+			Log.d("ultimo wifi", locationArray[j][1]);
+			Log.d("repeticiones:", locationArray[j][2]);
+			Log.d("Planta:", locationArray[j][3]);
 			if(Integer.valueOf(locationArray[j][2])>masApariciones)
 			{
 				masApariciones=Integer.valueOf(locationArray[j][2]);
-				Location=" Estas a la planta "+locationArray[j][3]+" al lloc "+locationArray[j][0];
+				Location=" Estas a la planta "+locationArray[j][3]+" en el lugar "+locationArray[j][0];
 			}
-			
+			else if(Integer.valueOf(locationArray[j][2])==masApariciones)
+			{
+				masApariciones=Integer.valueOf(locationArray[j][2]);
+				Location=Location+" - Estas a la planta "+locationArray[j][3]+" en el lugar "+locationArray[j][0];
+			}
 		}
 		return Location;
-    }
+	}
     
     @Override
     public void onDestroy()
